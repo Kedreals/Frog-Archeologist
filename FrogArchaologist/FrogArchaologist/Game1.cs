@@ -1,6 +1,8 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using FrogArchaologist.GameStates;
+using FrogArchaologist.Utility;
 
 namespace FrogArchaologist
 {
@@ -11,6 +13,11 @@ namespace FrogArchaologist
     {
         GraphicsDeviceManager graphics;
         SpriteBatch spriteBatch;
+
+        EGameState prevState = EGameState.None;
+        EGameState currentState = EGameState.MainMenu;
+
+        IGameState state = null;
 
         public Game1()
         {
@@ -52,6 +59,32 @@ namespace FrogArchaologist
             // TODO: Unload any non ContentManager content here
         }
 
+        private void HandleStateChange()
+        {
+            state?.UnloadContent(Content);
+
+            switch(currentState)
+            {
+                case EGameState.MainMenu:
+                    state = new MainMenu();
+                    break;
+
+                case EGameState.Ingame:
+                    break;
+
+                case EGameState.Options:
+                    break;
+
+                default:
+                    Exit();
+                    state = null;
+                    break;
+            }
+
+            state?.LoadContent(Content);
+            state?.Initialize();
+        }
+
         /// <summary>
         /// Allows the game to run logic such as updating the world,
         /// checking for collisions, gathering input, and playing audio.
@@ -59,10 +92,18 @@ namespace FrogArchaologist
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Update(GameTime gameTime)
         {
+            KeyboardController.Update();
+
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
 
-            // TODO: Add your update logic here
+            if(prevState != currentState)
+            {
+                HandleStateChange();
+                prevState = currentState;
+            }
+
+            currentState = state != null ? state.Update(gameTime) : EGameState.None;
 
             base.Update(gameTime);
         }
@@ -75,7 +116,11 @@ namespace FrogArchaologist
         {
             GraphicsDevice.Clear(Color.CornflowerBlue);
 
-            // TODO: Add your drawing code here
+            spriteBatch.Begin();
+
+            state?.Draw(spriteBatch);
+
+            spriteBatch.End();
 
             base.Draw(gameTime);
         }
